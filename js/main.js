@@ -1,100 +1,61 @@
-/* =========================================================
-   Harinee U.J. — Portfolio interactions
-   ========================================================= */
-
+/* Harinee U.J. — portfolio interactions */
 (function () {
   "use strict";
 
-  /* ---------- Footer year ---------- */
-  const yearEl = document.getElementById("year");
+  /* Footer year */
+  var yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  /* ---------- Mobile nav toggle ---------- */
-  const navToggle = document.getElementById("navToggle");
-  const navMenu = document.getElementById("navMenu");
+  /* Placeholders: anything still written as [LIKE THIS] is hidden, so unfinished
+     fields never appear on the live site. Fill the text in index.html to show it. */
+  var hasPlaceholder = function (s) { return /\[[^\]]+\]/.test(s || ""); };
 
-  if (navToggle && navMenu) {
-    navToggle.addEventListener("click", () => {
-      const isOpen = navMenu.classList.toggle("is-open");
-      navToggle.setAttribute("aria-expanded", String(isOpen));
-      navToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
-    });
-
-    // Close menu after selecting a link (mobile)
-    navMenu.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
-        if (window.matchMedia("(max-width: 760px)").matches) {
-          navMenu.classList.remove("is-open");
-          navToggle.setAttribute("aria-expanded", "false");
-        }
-      });
-    });
-  }
-
-  /* ---------- Project accordions ---------- */
-  document.querySelectorAll(".project__toggle").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const expanded = btn.getAttribute("aria-expanded") === "true";
-      const bodyId = btn.getAttribute("aria-controls");
-      const body = document.getElementById(bodyId);
-
-      btn.setAttribute("aria-expanded", String(!expanded));
-      if (body) body.hidden = expanded;
-    });
+  document.querySelectorAll("[data-href]").forEach(function (el) {
+    var href = el.getAttribute("data-href");
+    if (hasPlaceholder(href)) { el.hidden = true; } else { el.setAttribute("href", href); }
   });
 
-  /* ---------- Subtle reveal on scroll ---------- */
-  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll("[data-fill]").forEach(function (el) {
+    var unresolvedLink = el.hasAttribute("data-href") && el.hidden;
+    var innerLink = el.querySelector("[data-href]");
+    var unresolvedInner = innerLink && innerLink.hidden;
+    if (unresolvedLink || unresolvedInner || hasPlaceholder(el.textContent)) el.hidden = true;
+  });
 
-  if (!prefersReduced && "IntersectionObserver" in window) {
-    const targets = document.querySelectorAll(
-      ".section__head, .about__grid, .timeline__item, .skill-card, .project, .exposure-card, .cert, .contact__card, .resume-box"
-    );
+  document.querySelectorAll(".case__links").forEach(function (row) {
+    var anyVisible = Array.prototype.some.call(row.children, function (c) { return !c.hidden; });
+    if (!anyVisible) row.hidden = true;
+  });
 
-    targets.forEach((el) => {
-      el.style.opacity = "0";
-      el.style.transform = "translateY(14px)";
-      el.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+  /* Mobile nav */
+  var toggle = document.getElementById("navToggle");
+  var menu = document.getElementById("navMenu");
+  if (toggle && menu) {
+    var setOpen = function (open) {
+      menu.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    };
+    toggle.addEventListener("click", function () { setOpen(!menu.classList.contains("is-open")); });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { setOpen(false); });
     });
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.style.opacity = "1";
-            entry.target.style.transform = "translateY(0)";
-            io.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
-    );
-
-    targets.forEach((el) => io.observe(el));
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
   }
 
-  /* ---------- Active nav link on scroll ---------- */
-  const sections = document.querySelectorAll("main section[id]");
-  const navLinks = document.querySelectorAll('.nav__menu a[href^="#"]');
-
+  /* Highlight the nav link for the section in view */
+  var links = document.querySelectorAll('.nav__menu a[href^="#"]');
+  var sections = document.querySelectorAll("main section[id]");
   if ("IntersectionObserver" in window && sections.length) {
-    const setActive = (id) => {
-      navLinks.forEach((link) => {
-        const match = link.getAttribute("href") === "#" + id;
-        link.style.color = match ? "var(--teal-700)" : "";
-        link.style.fontWeight = match ? "700" : "";
-      });
-    };
-
-    const navObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id);
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        links.forEach(function (l) {
+          if (l.getAttribute("href") === "#" + entry.target.id) l.setAttribute("aria-current", "true");
+          else l.removeAttribute("aria-current");
         });
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
-    );
-
-    sections.forEach((s) => navObserver.observe(s));
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0 });
+    sections.forEach(function (s) { io.observe(s); });
   }
 })();
